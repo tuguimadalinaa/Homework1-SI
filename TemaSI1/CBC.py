@@ -62,13 +62,12 @@ def decrypt(array_cipher):
             nr_of_decr += 1
         else:
             result = xor_op(decr, last_element)
-            print(bytes(result))
             decr_elem.append(bytes(result))
         last_element = element
     return decr_elem
 
 
-result = encrypt("ana")
+result = encrypt("ana are mere rosii")
 decr = decrypt(result)
 string = ""
 for x in decr:
