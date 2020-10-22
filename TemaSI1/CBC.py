@@ -11,30 +11,15 @@ key = b'\xcd\xd4\xf0#\xb5&Sh\x1f\x0bleaD.\xe7'
 
 
 def xor_op(plaintext, the_xorer):
-    x = [a ^ b for (a, b) in zip(plaintext, the_xorer)]
     return [a ^ b for (a, b) in zip(plaintext, the_xorer)]
 
 
 def key_encrypt(xored_text):
-    x = [a ^ b for (a, b) in zip(xored_text, key)]
     return [a ^ b for (a, b) in zip(xored_text, key)]
-    # aes = AES.new(key, AES.MODE_CBC, iv)
-    # # list = "".join(str(x) for x in xored_text)
-    # # return aes.encrypt(pad(list.encode(), AES.block_size))
-    # return aes.encrypt(pad(xored_text, AES.block_size))
 
 
 def key_decrypt(xored_text):
-    x = [a ^ b for (a, b) in zip(xored_text, key)]
     return [a ^ b for (a, b) in zip(xored_text, key)]
-    # aes = AES.new(key, AES.MODE_CBC, iv)
-    # # list = "".join(str(x) for x in xored_text)
-    # # return aes.decrypt(pad(list.encode(), AES.block_size))
-    # return aes.decrypt(pad(xored_text, AES.block_size))
-
-
-def key_encrypt_with_plus(xored_text):
-    return [a + b for (a, b) in zip(xored_text, key)]
 
 
 def encrypt(plaintext):
@@ -43,6 +28,10 @@ def encrypt(plaintext):
     bytes_plaintext = bytes(plaintext.encode())
     start = 0
     end = 16
+    if end > len(bytes_plaintext):
+        xored_array = xor_op(bytes_plaintext[start:len(bytes_plaintext)], iv)
+        encrypted_elements.append(key_encrypt(xored_array))
+        return encrypted_elements
     while end < len(bytes_plaintext):
         if number_of_elements_encrypted == 0:
             xored_array = xor_op(bytes_plaintext[start:end], iv)
@@ -54,6 +43,7 @@ def encrypt(plaintext):
         start = end
         end += 16
     end -= 16
+
     if end != len(bytes_plaintext):
         xored_array = xor_op(bytes_plaintext[end:len(bytes_plaintext)], encrypted_elements[len(encrypted_elements) - 1])
         encrypted_elements.append(key_encrypt(xored_array))
@@ -71,33 +61,21 @@ def decrypt(array_cipher):
             decr_elem.append(bytes(result))
             nr_of_decr += 1
         else:
-            result = xor_op(decr,last_element)
+            result = xor_op(decr, last_element)
             print(bytes(result))
             decr_elem.append(bytes(result))
         last_element = element
     return decr_elem
 
 
-
-result = encrypt("ana are mere merele sunt frumoase tare")
+result = encrypt("ana")
 decr = decrypt(result)
 string = ""
 for x in decr:
     string += x.decode()
 print(string)
-# bytes_plaintext = plaintext.encode()
-# print(bytes_plaintext[0:15])
-# x = key_encrypt(bytes_plaintext[0:15])
-# print(bytes(key_decrypt(x)))
-#
-# decrypt(result)
 
-# iv = b'\x7f\xee\xad\x0bg\x8c-,\xdb\xab\x1f\xca\x02u9\x17'
-# key = b'\xcd\xd4\xf0#\xb5&Sh\x1f\x0bleaD.\xe7'
 # aes = AES.new(key, AES.MODE_CBC, iv)
-# data = b'hello world 1234' # <- 16 bytes
-# encd = aes.encrypt(data)
-# print(encd)
-# aes = AES.new(key, AES.MODE_CBC, iv)
-# decd = aes.decrypt(encd)
-# print(bytes(decd))
+# # list = "".join(str(x) for x in xored_text)
+# # return aes.decrypt(pad(list.encode(), AES.block_size))
+# return aes.decrypt(pad(xored_text, AES.block_size))
