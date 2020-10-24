@@ -14,25 +14,28 @@ key = b'\xcd\xd4\xf0#\xb5&Sh\x1f\x0bleaD.\xe7'
 
 
 def xor_op(plaintext, the_xorer):
-    return [a ^ b for a, b in zip(plaintext, the_xorer)]
+    return [pad(str(a^b).encode(),16) for a, b in zip(plaintext, the_xorer)]
 
 
 def key_encrypt(message):
     print("Inainte de encrypt: ", message)
-    message = ''.join(map(str, message))
-    raw = pad(message.encode(), 16)
-    cipher = AES.new(key, AES.MODE_ECB)
-    enc = cipher.encrypt(raw)
-    print("Enc:", enc)
-    return enc
+    encrp_array = []
+    for m in message:
+        cipher = AES.new(key, AES.MODE_ECB)
+        raw = pad(str(m).encode(), 16)
+        enc = cipher.encrypt(raw)
+        encrp_array.append(enc)
+    return encrp_array
 
 
 def key_decrypt(enc):
-    raw = pad(enc, 16)
-    cipher = AES.new(key, AES.MODE_ECB)
-    dec = cipher.decrypt(raw)
-    print("Dec: ", dec)
-    return dec
+    encrp_array = []
+    print("A ajuns la decriptat:", enc)
+    for m in enc:
+        cipher = AES.new(key, AES.MODE_ECB)
+        enc = cipher.decrypt(m.decode())
+        encrp_array.append(enc)
+    return encrp_array
 
 
 def encrypt(plaintext):
@@ -43,6 +46,7 @@ def encrypt(plaintext):
     end = 16
     if end > len(bytes_plaintext):
         xored = xor_op(bytes_plaintext[start:len(bytes_plaintext)], iv)
+        encr = key_encrypt(xored)
         encrypted_elements.append(key_encrypt(xored))
         return encrypted_elements
     while end > len(bytes_plaintext):
@@ -72,7 +76,7 @@ def decrypt(array_cipher):
         decr = key_decrypt(element)
         print("Elementul decriptat: ", decr)
         if nr_of_decr == 0:
-            result = xor_op([30, 128, 204], iv)
+            result = xor_op(decr, iv)
             decr_elem.append(result)
             nr_of_decr += 1
         else:
@@ -85,6 +89,7 @@ def decrypt(array_cipher):
 result = encrypt("ana")
 # print("Encrypted text: ", len(result[0]))
 decr = decrypt(result)
+print(decr)
 string= ""
 print(decr[0])
 for x in decr[0]:
