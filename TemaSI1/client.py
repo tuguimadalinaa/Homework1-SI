@@ -34,7 +34,14 @@ def get_first_iteration(text):
     return "".join(letter for letter in [chr(int(x)) for x in final_string])
 
 
+def get_decoded(text, last_element):
+    CBC_decrypt = CBC.key_decrypt_CBC(text, AES_data['key'])
+    CBC_INT = [int(x) for x in CBC_decrypt.split("~")]
+    result = CBC.xor(CBC_INT, last_element.encode())
+    return "".join(letter for letter in [chr(int(x)) for x in result])
+
 try:
+    whole_text = ""
     while True:
         data = get_encryption_type()
         input_available = False
@@ -50,14 +57,16 @@ try:
                 print("Urmeaza sa primim cheia de refresh")
                 recieving_new_key = True
             else:
-                print("Recv:", received)
                 if first_iteration:
                     first_iteration = False
                     response = get_first_iteration(received)
-                    print(response)
+                    whole_text += response
                 else:
-                    print(received)
+                    response = received.decode().split('LAST_ELEM')
+                    response = get_decoded(response[0], response[1])
+                    whole_text += response
             received = tcp_client.recv(1024)
+        print(whole_text)
 except Exception as ex:
     print(ex)
     tcp_client.close()

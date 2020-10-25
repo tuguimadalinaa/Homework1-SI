@@ -16,7 +16,6 @@ s.listen(1)
 conn, addr = s.accept()
 can_do_transfer = False
 mode = None
-first_iteration = 0
 
 
 def get_km_client_conn():
@@ -39,8 +38,17 @@ def first_iteration(text):
     return CBC_encrypt_text
 
 
+def encode_CBC(text, last_element):
+    xored_text = CBC.xor(text, last_element.encode())
+    xored_text = "~".join(letter for letter in xored_text)
+    CBC_encrypt_text = CBC.key_encrypt_CBC(xored_text, AES_data['key'])
+    return CBC_encrypt_text
+
+
 def send_data(conn):
     q = 0
+    last_encoded_element = None
+    is_first_iteration = True
     with open("text_to_send", "r+") as f:
         map = mmap.mmap(f.fileno(), 0)
         map.readline()
@@ -55,12 +63,16 @@ def send_data(conn):
         while start < end:
             q += 1
             text = map[start:(start + 16)]
-            if first_iteration == 0:
-                print("Prima iteratie")
+            if is_first_iteration:
+                encoded_text = first_iteration(text)
+                last_encoded_element = encoded_text
+                is_first_iteration = False
+                conn.send(encoded_text.encode())
             else:
-                CBC_encrypt = CBC.key_encrypt_CBC(text, AES_data['key'])
-                print(CBC_encrypt)
-                conn.send(CBC_encrypt.encode())
+                print(last_encoded_element)
+                CBC_encrypt = encode_CBC(text, last_encoded_element)
+                conn.send((CBC_encrypt + "LAST_ELEM" + last_encoded_element).encode())
+                last_encoded_element = CBC_encrypt
             if q == 2:
                 time.sleep(1)
                 print("Key refrshing")
