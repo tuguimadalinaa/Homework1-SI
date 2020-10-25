@@ -47,6 +47,7 @@ def send_data(conn):
             km_client.send('key_refresh'.encode())
             received = km_client.recv(1024)
             km_client.close()
+            AES_data['key'] = aes_ecb_decrypt(received)
             conn.send(received)
             q = 0
         start += 16

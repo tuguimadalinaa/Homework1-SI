@@ -1,2 +1,3 @@
 https://stackoverflow.com/questions/51884553/aes-ecb-encrypting-in-python
 https://stackoverflow.com/questions/29408173/byte-operations-xor-in-python
+K3 = ''.join(chr(random.randint(0, 0xFF)) for i in range(16))

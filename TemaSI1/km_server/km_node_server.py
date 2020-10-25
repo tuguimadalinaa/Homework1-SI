@@ -37,10 +37,10 @@ while 1:
         aes = AES.new(AES_data["K3"], AES.MODE_ECB)
         aes_key = None
         if mode == "CBC":
-            AES_data["CBC_key"] = Crypto.Random.get_random_bytes(AES.block_size)
+            KM["CBC_key"] = Crypto.Random.get_random_bytes(AES.block_size)
             aes_key = aes.encrypt(pad(KM["CBC_key"], AES.block_size))
         elif mode == "OFB":
-            AES_data["OFB_key"] = Crypto.Random.get_random_bytes(AES.block_size)
+            KM["OFB_key"] = Crypto.Random.get_random_bytes(AES.block_size)
             aes_key = aes.encrypt(pad(KM["OFB_key"], AES.block_size))
         print(aes_key)
         conn.send(aes_key)
