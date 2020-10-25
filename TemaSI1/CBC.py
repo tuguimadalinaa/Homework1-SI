@@ -3,12 +3,17 @@ import base64
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 
-
 iv = b'\x7f\xee\xad\x0bg\x8c-,\xdb\xab\x1f\xca\x02u9\x17'
 key = b'\xcd\xd4\xf0#\xb5&Sh\x1f\x0bleaD.\xe7'
 
+
 def xor_op(plaintext, the_xorer):
-    return [a ^ b for a,b in zip(plaintext, the_xorer)]
+    return [a ^ b for a, b in zip(plaintext, the_xorer)]
+
+
+def xor(plaintext, xorer):
+    return [str(a ^ b) for a, b in zip(plaintext, xorer)]
+# the good one
 
 
 def key_encrypt(message):
@@ -79,12 +84,23 @@ def decrypt(array_cipher):
         last_element = element
     return decr_elem
 
+# the good ones
+def key_encrypt_CBC(text, given_key):
+    cipher = AES.new(given_key, AES.MODE_ECB)
+    raw = pad(str(text).encode(), 16)
+    enc = cipher.encrypt(raw)
+    return base64.b64encode(enc).decode('utf-8')
 
-result = encrypt("ana")
-print("Encrypted text: ", result)
-decr = decrypt(result)
-string = ""
-for x in decr[0]:
-    string += chr(x)
-print("Decrypted text: ", string)
 
+def key_decrypt_CBC(text, given_key):
+    enc = base64.b64decode(text)
+    cipher = AES.new(given_key, AES.MODE_ECB)
+    enc2 = cipher.decrypt(enc)
+    return unpad(enc2, 16).decode('utf-8')
+# result = encrypt("ana")
+# print("Encrypted text: ", result)
+# decr = decrypt(result)
+# string = ""
+# for x in decr[0]:
+#     string += chr(x)
+# print("Decrypted text: ", string)

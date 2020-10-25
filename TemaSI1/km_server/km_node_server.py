@@ -7,7 +7,7 @@ data_for_server = {'TCP_IP': '127.0.0.1', 'TCP_PORT': 3000, "BUFFER_SIZE": 1024}
 AES_data = {'K3': b'1234567891234568', 'iv': b'\xad\xbe\xf6\xc2\xb3p\x10I\xc6\x96 M\xb9\xa1\x96b'}
 mode = None
 KM = dict()
-KM["CBC_key"] = b'cheia_unu'
+KM["CBC_key"] = b'abcdabcdabcdabcd'
 KM["OFB_key"] = b'cheia_doi'
 KM["KEY_3"] = AES_data["K3"]
 print("Km server started")
@@ -38,10 +38,10 @@ while 1:
         aes_key = None
         if mode == "CBC":
             KM["CBC_key"] = Crypto.Random.get_random_bytes(AES.block_size)
-            aes_key = aes.encrypt(pad(KM["CBC_key"], AES.block_size))
+            aes_key = aes.encrypt(pad(KM["CBC_key"], 16))
         elif mode == "OFB":
             KM["OFB_key"] = Crypto.Random.get_random_bytes(AES.block_size)
-            aes_key = aes.encrypt(pad(KM["OFB_key"], AES.block_size))
+            aes_key = aes.encrypt(pad(KM["OFB_key"], 16))
         print(aes_key)
         conn.send(aes_key)
     else:

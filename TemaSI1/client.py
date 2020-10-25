@@ -1,6 +1,7 @@
 import socket
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
+import CBC
 
 host_ip, server_port = "127.0.0.1", 5005
 tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -12,6 +13,7 @@ encryption_type = None
 key_to_use = None
 recieving_new_key = False
 print("Client started")
+first_iteration = True
 
 
 def get_encryption_type():
@@ -23,6 +25,13 @@ def aes_ecb_decrypt(cypher):
     aes = AES.new(AES_data["K3"].encode("utf8"), AES.MODE_ECB)
     aes_key = aes.decrypt(cypher)
     return unpad(aes_key, 16)
+
+
+def get_first_iteration(text):
+    CBC_text = CBC.key_decrypt_CBC(text, AES_data['key'])
+    CBC_INT = [int(x) for x in CBC_text.split("~")]
+    final_string = CBC.xor(CBC_INT, AES_data['iv'])
+    return "".join(letter for letter in [chr(int(x)) for x in final_string])
 
 
 try:
@@ -41,7 +50,13 @@ try:
                 print("Urmeaza sa primim cheia de refresh")
                 recieving_new_key = True
             else:
-                print(received)
+                print("Recv:", received)
+                if first_iteration:
+                    first_iteration = False
+                    response = get_first_iteration(received)
+                    print(response)
+                else:
+                    print(received)
             received = tcp_client.recv(1024)
 except Exception as ex:
     print(ex)
