@@ -2,11 +2,6 @@ import base64
 
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
-import os
-import numpy as np
-
-# https://stackoverflow.com/questions/29408173/byte-operations-xor-in-python
-# iv = Crypto.Random.get_random_bytes(AES.block_size)
 
 
 iv = b'\x7f\xee\xad\x0bg\x8c-,\xdb\xab\x1f\xca\x02u9\x17'
@@ -93,8 +88,3 @@ for x in decr[0]:
     string += chr(x)
 print("Decrypted text: ", string)
 
-# aes = AES.new(key, AES.MODE_CBC, iv)
-# # list = "".join(str(x) for x in xored_text)
-# # return aes.decrypt(pad(list.encode(), AES.block_size))
-# return aes.decrypt(pad(xored_text, AES.block_size))
-# https://stackoverflow.com/questions/51884553/aes-ecb-encrypting-in-python
