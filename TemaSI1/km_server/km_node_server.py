@@ -18,8 +18,7 @@ while 1:
     conn, addr = s.accept()
     data = conn.recv(data_for_server["BUFFER_SIZE"])
     data = data.decode()
-    if not data:
-        break
+    if not data: break
     print("Node KM received data: ", data)
     if data == "CBC":
         mode = "CBC"
@@ -46,5 +45,4 @@ while 1:
         conn.send(aes_key)
     else:
         conn.send("does not exist".encode())
-
-
+conn.close()
