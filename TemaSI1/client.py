@@ -2,6 +2,7 @@ import socket
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 import CBC
+import OFB
 
 host_ip, server_port = "127.0.0.1", 5005
 tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -27,7 +28,7 @@ def aes_ecb_decrypt(cypher):
     return unpad(aes_key, 16)
 
 
-def get_first_iteration(text):
+def get_first_iteration_CBC(text):
     CBC_text = CBC.key_decrypt_CBC(text, AES_data['key'])
     CBC_INT = [int(x) for x in CBC_text.split("~")]
     final_string = CBC.xor(CBC_INT, AES_data['iv'])
@@ -40,15 +41,30 @@ def get_decoded(text, last_element):
     result = CBC.xor(CBC_INT, last_element.encode())
     return "".join(letter for letter in [chr(int(x)) for x in result])
 
-try:
-    whole_text = ""
-    while True:
-        data = get_encryption_type()
-        input_available = False
-        tcp_client.sendall(data.encode())
-        received = tcp_client.recv(1024)
-        AES_data['key'] = aes_ecb_decrypt(received)
-        received = tcp_client.recv(1024)
+
+def get_first_iteration_OFB(received):
+    splited_response = received.decode().split("~")
+    splited_response_string = [int(x) for x in splited_response]
+    OFB_encrypt = OFB.key_encrypt_OFB(AES_data["iv"], AES_data["key"])
+    result = OFB.xor(splited_response_string, OFB_encrypt.encode())
+    return "".join(letter for letter in [chr(int(x)) for x in result])
+
+def get_decoded_OFB(text, last_element):
+    CBC_decrypt = CBC.key_decrypt_CBC(text, AES_data['key'])
+    CBC_INT = [int(x) for x in CBC_decrypt.split("~")]
+    result = CBC.xor(CBC_INT, last_element.encode())
+    return "".join(letter for letter in [chr(int(x)) for x in result])
+
+
+whole_text = ""
+while True:
+    data = get_encryption_type()
+    input_available = False
+    tcp_client.sendall(data.encode())
+    received = tcp_client.recv(1024)
+    AES_data['key'] = aes_ecb_decrypt(received)
+    received = tcp_client.recv(1024)
+    if data == "CBC":
         while received != b"Done":
             if recieving_new_key:
                 AES_data['key'] = aes_ecb_decrypt(received)
@@ -59,7 +75,7 @@ try:
             else:
                 if first_iteration:
                     first_iteration = False
-                    response = get_first_iteration(received)
+                    response = get_first_iteration_CBC(received)
                     whole_text += response
                 else:
                     response = received.decode().split('LAST_ELEM')
@@ -67,6 +83,23 @@ try:
                     whole_text += response
             received = tcp_client.recv(1024)
         print(whole_text)
-except Exception as ex:
-    print(ex)
-    tcp_client.close()
+    elif data == "OFB":
+        while received != b"Done":
+            if recieving_new_key:
+                AES_data['key'] = aes_ecb_decrypt(received)
+                recieving_new_key = False
+            elif received == b'key_refresh' and not recieving_new_key:
+                print("Urmeaza sa primim cheia de refresh")
+                recieving_new_key = True
+            else:
+                if first_iteration:
+                    first_iteration = False
+                    response = get_first_iteration_OFB(received)
+                    whole_text += response
+                else:
+                    response = received.decode().split('LAST_ELEM')
+                    response = get_decoded(response[0], response[1])
+                    whole_text += response
+            received = tcp_client.recv(1024)
+        print("Whole text: ", whole_text)
+tcp_client.close()

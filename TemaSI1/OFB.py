@@ -1,15 +1,11 @@
-iv = b'\x7f\xee\xad\x0bg\x8c-,\xdb\xab\x1f\xca\x02u9\x17'
-key = b'\xcd\xd4\xf0#\xb5&Sh\x1f\x0bleaD.\xe7'
-def xor_op(plaintext, the_xorer):
-    return [a ^ b for (a, b) in zip(plaintext, the_xorer)]
+import base64
+
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
 
 
-def key_encrypt(xored_text, xorer):
-    return [a ^ b for (a, b) in zip(xored_text, xorer)]
-
-
-def key_decrypt(xored_text):
-    return [a ^ b for (a, b) in zip(xored_text, key)]
+def xor(plaintext, xorer):
+    return [str(a ^ b) for a, b in zip(plaintext, xorer)]
 
 
 def encrypt(plaintext):
@@ -59,10 +55,15 @@ def decrypt(array_cipher):
     return decr_elem
 
 
-result = encrypt("ana are mere rosii")
-print("Encrypted text: ", result)
-decr = decrypt(result)
-string = ""
-for x in decr:
-    string += x.decode()
-print("Decrypted text: ", string)
+def key_encrypt_OFB(text, given_key):
+    cipher = AES.new(given_key, AES.MODE_ECB)
+    raw = pad(str(text).encode(), 16)
+    enc = cipher.encrypt(raw)
+    return base64.b64encode(enc).decode('utf-8')
+
+
+def key_decrypt_OFB(text, given_key):
+    enc = base64.b64decode(text)
+    cipher = AES.new(given_key, AES.MODE_ECB)
+    enc2 = cipher.decrypt(enc)
+    return unpad(enc2, 16).decode('utf-8')

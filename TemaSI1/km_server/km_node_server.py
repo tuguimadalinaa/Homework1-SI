@@ -8,7 +8,7 @@ AES_data = {'K3': b'1234567891234568', 'iv': b'\xad\xbe\xf6\xc2\xb3p\x10I\xc6\x9
 mode = None
 KM = dict()
 KM["CBC_key"] = b'abcdabcdabcdabcd'
-KM["OFB_key"] = b'cheia_doi'
+KM["OFB_key"] = b'abcdabcdabcdabcd'
 KM["KEY_3"] = AES_data["K3"]
 print("Km server started")
 while 1:
