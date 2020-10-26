@@ -92,10 +92,19 @@ def send_data_CBC(conn):
 
 
 def first_iteration_OFB(text):
-    xored_text = OFB.key_encrypt_OFB(AES_data["iv"], AES_data["key"])
+    ofb_enc = OFB.key_encrypt_OFB(AES_data["iv"], AES_data["key"])
+    OFB_encrypt_text = OFB.xor(ofb_enc.encode(), text)
+    OFB_text = "~".join(letter for letter in OFB_encrypt_text)
+    return OFB_text, ofb_enc
+
+
+def get_next_iteration(text, last_element):
+    xored_text = OFB.key_encrypt_OFB(last_element, AES_data["key"])
+    print(xored_text.encode())
+    print(text)
     OFB_encrypt_text = OFB.xor(xored_text.encode(), text)
     OFB_text = "~".join(letter for letter in OFB_encrypt_text)
-    return OFB_text
+    return OFB_text, xored_text
 
 
 def send_data_OFB(conn):
@@ -109,7 +118,7 @@ def send_data_OFB(conn):
     end = len(map)
     if end < 16:
         text = map[0:len(map)]
-        encoded_text = first_iteration_OFB(text)
+        encoded_text, last_encoded_element = first_iteration_OFB(text)
         conn.send(encoded_text.encode())
         time.sleep(1)
     else:
@@ -117,15 +126,14 @@ def send_data_OFB(conn):
             q += 1
             text = map[start:(start + 16)]
             if is_first_iteration:
-                encoded_text = first_iteration_OFB(text)
-                last_encoded_element = encoded_text
+                encoded_text, last_encoded_element = first_iteration_OFB(text)
                 is_first_iteration = False
                 conn.send(encoded_text.encode())
             else:
                 print(last_encoded_element)
-                CBC_encrypt = encode_CBC(text, last_encoded_element)
-                conn.send((CBC_encrypt + "LAST_ELEM" + last_encoded_element).encode())
-                last_encoded_element = CBC_encrypt
+                encoded_text, last_encoded_element = get_next_iteration(text, last_encoded_element)
+                print("Encoded text: ", encoded_text)
+                conn.send(encoded_text.encode())
             if q == 2:
                 time.sleep(1)
                 print("Key refrshing")
@@ -135,6 +143,7 @@ def send_data_OFB(conn):
                 received = km_client.recv(1024)
                 km_client.close()
                 AES_data['key'] = aes_ecb_decrypt(received)
+                print(AES_data['key'])
                 conn.send(received)
                 q = 0
             start += 16

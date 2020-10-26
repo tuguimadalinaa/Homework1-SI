@@ -47,13 +47,16 @@ def get_first_iteration_OFB(received):
     splited_response_string = [int(x) for x in splited_response]
     OFB_encrypt = OFB.key_encrypt_OFB(AES_data["iv"], AES_data["key"])
     result = OFB.xor(splited_response_string, OFB_encrypt.encode())
-    return "".join(letter for letter in [chr(int(x)) for x in result])
+    return "".join(letter for letter in [chr(int(x)) for x in result]), OFB_encrypt
+
 
 def get_decoded_OFB(text, last_element):
-    CBC_decrypt = CBC.key_decrypt_CBC(text, AES_data['key'])
-    CBC_INT = [int(x) for x in CBC_decrypt.split("~")]
-    result = CBC.xor(CBC_INT, last_element.encode())
-    return "".join(letter for letter in [chr(int(x)) for x in result])
+    splitted_resp = text.split("~")
+    splitted_resp = [int(x) for x in splitted_resp]
+    OFB_encrypt = OFB.key_encrypt_OFB(last_element, AES_data['key'])
+    print(OFB_encrypt)
+    result = OFB.xor(splitted_resp, OFB_encrypt.encode())
+    return "".join(letter for letter in [chr(int(x)) for x in result]), OFB_encrypt
 
 
 whole_text = ""
@@ -84,9 +87,11 @@ while True:
             received = tcp_client.recv(1024)
         print(whole_text)
     elif data == "OFB":
+        last_element = None
         while received != b"Done":
             if recieving_new_key:
                 AES_data['key'] = aes_ecb_decrypt(received)
+                print(AES_data['key'])
                 recieving_new_key = False
             elif received == b'key_refresh' and not recieving_new_key:
                 print("Urmeaza sa primim cheia de refresh")
@@ -94,12 +99,11 @@ while True:
             else:
                 if first_iteration:
                     first_iteration = False
-                    response = get_first_iteration_OFB(received)
+                    response, last_element = get_first_iteration_OFB(received)
                     whole_text += response
                 else:
-                    response = received.decode().split('LAST_ELEM')
-                    response = get_decoded(response[0], response[1])
+                    response, last_element = get_decoded_OFB(received.decode(), last_element)
                     whole_text += response
             received = tcp_client.recv(1024)
-        print("Whole text: ", whole_text)
+        print("Whole text OFB: ", whole_text)
 tcp_client.close()
