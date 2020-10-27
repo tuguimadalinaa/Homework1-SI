@@ -17,11 +17,6 @@ print("Client started")
 first_iteration = True
 
 
-def get_encryption_type():
-    encryption_type = input("Node A Choose: CBC or OFB: ")
-    return encryption_type
-
-
 def aes_ecb_decrypt(cypher):
     aes = AES.new(AES_data["K3"].encode("utf8"), AES.MODE_ECB)
     aes_key = aes.decrypt(cypher)
@@ -60,7 +55,8 @@ def get_decoded_OFB(text, last_element):
 
 whole_text = ""
 while True:
-    data = get_encryption_type()
+    data = tcp_client.recv(1024).decode()
+    print("Node A has chosen: ", data)
     input_available = False
     tcp_client.sendall(data.encode())
     received = tcp_client.recv(1024)
@@ -81,7 +77,7 @@ while True:
                     if data == "CBC":
                         response = get_first_iteration_CBC(received)
                         whole_text += response
-                    elif data== "OFB":
+                    elif data == "OFB":
                         response, last_element = get_first_iteration_OFB(received)
                         whole_text += response
                 else:

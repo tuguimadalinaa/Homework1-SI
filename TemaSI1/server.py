@@ -5,6 +5,7 @@ import mmap
 import time
 import CBC
 import OFB
+import random
 
 AES_data = {'K3': b'1234567891234568', 'iv': b'\xad\xbe\xf6\xc2\xb3p\x10I\xc6\x96 M\xb9\xa1\x96b', 'key': None}
 print("Server started")
@@ -17,6 +18,7 @@ s.listen(1)
 conn, addr = s.accept()
 can_do_transfer = False
 mode = None
+done = False
 
 
 def get_km_client_conn():
@@ -70,7 +72,6 @@ def send_data_CBC(conn):
                 is_first_iteration = False
                 conn.send(encoded_text.encode())
             else:
-                print(last_encoded_element)
                 CBC_encrypt = encode_CBC(text, last_encoded_element)
                 conn.send((CBC_encrypt + "LAST_ELEM" + last_encoded_element).encode())
                 last_encoded_element = CBC_encrypt
@@ -88,6 +89,8 @@ def send_data_CBC(conn):
             start += 16
     time.sleep(1)
     conn.send("Done".encode())
+    global done
+    done = True
     print("Whole data sent")
 
 
@@ -130,9 +133,7 @@ def send_data_OFB(conn):
                 is_first_iteration = False
                 conn.send(encoded_text.encode())
             else:
-                print(last_encoded_element)
                 encoded_text, last_encoded_element = get_next_iteration(text, last_encoded_element)
-                print("Encoded text: ", encoded_text)
                 conn.send(encoded_text.encode())
             if q == 2:
                 time.sleep(1)
@@ -143,7 +144,6 @@ def send_data_OFB(conn):
                 received = km_client.recv(1024)
                 km_client.close()
                 AES_data['key'] = aes_ecb_decrypt(received)
-                print(AES_data['key'])
                 conn.send(received)
                 q = 0
             start += 16
@@ -152,30 +152,45 @@ def send_data_OFB(conn):
     print("Whole data sent")
 
 
-while 1:
-    data = conn.recv(BUFFER_SIZE)
-    data = data.decode()
-    if not data: break
-    km_client = get_km_client_conn()
-    km_client.send(data.encode())
-    received = km_client.recv(1024)
-    km_client.close()
-    if data == 'CBC':
-        mode = "CBC"
-        can_do_transfer = True
-        AES_data['key'] = aes_ecb_decrypt(received)
-        conn.send(received)
-    elif data == "OFB":
-        mode = "OFB"
-        can_do_transfer = True
-        AES_data['key'] = aes_ecb_decrypt(received)
-        conn.send(received)
-    else:
-        conn.send("No such mode".encode())
-    if can_do_transfer:
-        print("AES data: ", AES_data['key'])
+def get_encryption_type():
+    data = ["CBC", "OFB"]
+    return random.choice(data)
+
+
+def start_server():
+    while 1:
+        print("Done:", done)
+        if done:
+            conn.close()
+            return
+        sender = get_encryption_type()
+        print("Selected mode:", sender)
+        conn.send(sender.encode())
+        data = conn.recv(BUFFER_SIZE)
+        data = data.decode()
+        if not data: break
+        km_client = get_km_client_conn()
+        km_client.send(data.encode())
+        received = km_client.recv(1024)
+        km_client.close()
         if data == 'CBC':
-            send_data_CBC(conn)
+            mode = "CBC"
+            can_do_transfer = True
+            AES_data['key'] = aes_ecb_decrypt(received)
+            conn.send(received)
+        elif data == "OFB":
+            mode = "OFB"
+            can_do_transfer = True
+            AES_data['key'] = aes_ecb_decrypt(received)
+            conn.send(received)
         else:
-            send_data_OFB(conn)
-conn.close()
+            conn.send("No such mode".encode())
+        if can_do_transfer:
+            if data == 'CBC':
+                send_data_CBC(conn)
+            else:
+                send_data_OFB(conn)
+
+
+if __name__ == "__main__":
+    start_server()
