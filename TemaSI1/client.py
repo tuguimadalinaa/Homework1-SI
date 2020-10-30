@@ -1,4 +1,6 @@
 import socket
+from time import sleep
+
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 import CBC
@@ -25,31 +27,26 @@ def aes_ecb_decrypt(cypher):
 
 def get_first_iteration_CBC(text):
     CBC_text = CBC.key_decrypt_CBC(text, AES_data['key'])
-    CBC_INT = [int(x) for x in CBC_text.split("~")]
-    final_string = CBC.xor(CBC_INT, AES_data['iv'])
+    final_string = CBC.xor(CBC_text, AES_data['iv'])
+    print("".join(letter for letter in [chr(int(x)) for x in final_string]))
     return "".join(letter for letter in [chr(int(x)) for x in final_string])
 
 
 def get_decoded(text, last_element):
     CBC_decrypt = CBC.key_decrypt_CBC(text, AES_data['key'])
-    CBC_INT = [int(x) for x in CBC_decrypt.split("~")]
-    result = CBC.xor(CBC_INT, last_element.encode())
+    result = CBC.xor(CBC_decrypt, last_element)
     return "".join(letter for letter in [chr(int(x)) for x in result])
 
 
 def get_first_iteration_OFB(received):
-    splited_response = received.decode().split("~")
-    splited_response_string = [int(x) for x in splited_response]
     OFB_encrypt = OFB.key_encrypt_OFB(AES_data["iv"], AES_data["key"])
-    result = OFB.xor(splited_response_string, OFB_encrypt.encode())
+    result = OFB.xor(received, OFB_encrypt)
     return "".join(letter for letter in [chr(int(x)) for x in result]), OFB_encrypt
 
 
 def get_decoded_OFB(text, last_element):
-    splitted_resp = text.split("~")
-    splitted_resp = [int(x) for x in splitted_resp]
     OFB_encrypt = OFB.key_encrypt_OFB(last_element, AES_data['key'])
-    result = OFB.xor(splitted_resp, OFB_encrypt.encode())
+    result = OFB.xor(text, OFB_encrypt)
     return "".join(letter for letter in [chr(int(x)) for x in result]), OFB_encrypt
 
 
@@ -82,11 +79,13 @@ while True:
                         whole_text += response
                 else:
                     if data == "CBC":
-                        response = received.decode().split('LAST_ELEM')
-                        response = get_decoded(response[0], response[1])
+                        response = received
+                        last_element = tcp_client.recv(1024)
+                        response = get_decoded(response, last_element)
                         whole_text += response
+                        print(response)
                     elif data == "OFB":
-                        response, last_element = get_decoded_OFB(received.decode(), last_element)
+                        response, last_element = get_decoded_OFB(received, last_element)
                         whole_text += response
             received = tcp_client.recv(1024)
         print(whole_text)

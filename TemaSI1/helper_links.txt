@@ -1,4 +1,5 @@
 https://stackoverflow.com/questions/51884553/aes-ecb-encrypting-in-python
 https://stackoverflow.com/questions/29408173/byte-operations-xor-in-python
 K3 = ''.join(chr(random.randint(0, 0xFF)) for i in range(16))
+https://wiki.python.org/moin/TcpCommunication
 https://www.novixys.com/blog/using-aes-encryption-decryption-python-pycrypto/#:~:text=And%20that%20is%20all%20there,the%20same%20process%20in%20reverse.

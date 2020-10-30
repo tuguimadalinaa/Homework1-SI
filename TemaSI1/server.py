@@ -36,14 +36,12 @@ def aes_ecb_decrypt(cypher):
 
 def first_iteration_CBC(text):
     xored_text = CBC.xor(text, AES_data['iv'])
-    xored_text = "~".join(letter for letter in xored_text)
     CBC_encrypt_text = CBC.key_encrypt_CBC(xored_text, AES_data['key'])
     return CBC_encrypt_text
 
 
 def encode_CBC(text, last_element):
-    xored_text = CBC.xor(text, last_element.encode())
-    xored_text = "~".join(letter for letter in xored_text)
+    xored_text = CBC.xor(text, last_element)
     CBC_encrypt_text = CBC.key_encrypt_CBC(xored_text, AES_data['key'])
     return CBC_encrypt_text
 
@@ -60,7 +58,7 @@ def send_data_CBC(conn):
     if end < 16:
         text = map[0:len(map)]
         encoded_text = first_iteration_CBC(text)
-        conn.send(encoded_text.encode())
+        conn.send(encoded_text)
         time.sleep(1)
     else:
         while start < end:
@@ -70,10 +68,13 @@ def send_data_CBC(conn):
                 encoded_text = first_iteration_CBC(text)
                 last_encoded_element = encoded_text
                 is_first_iteration = False
-                conn.send(encoded_text.encode())
+                conn.send(encoded_text)
             else:
                 CBC_encrypt = encode_CBC(text, last_encoded_element)
-                conn.send((CBC_encrypt + "LAST_ELEM" + last_encoded_element).encode())
+                time.sleep(1)
+                conn.send(CBC_encrypt)
+                time.sleep(1)
+                conn.send(last_encoded_element)
                 last_encoded_element = CBC_encrypt
             if q == 2:
                 time.sleep(1)
@@ -92,26 +93,25 @@ def send_data_CBC(conn):
     global done
     done = True
     print("Whole data sent")
+    conn.close()
 
 
 def first_iteration_OFB(text):
     ofb_enc = OFB.key_encrypt_OFB(AES_data["iv"], AES_data["key"])
-    OFB_encrypt_text = OFB.xor(ofb_enc.encode(), text)
-    OFB_text = "~".join(letter for letter in OFB_encrypt_text)
-    return OFB_text, ofb_enc
+    OFB_encrypt_text = OFB.xor(ofb_enc, text)
+    return OFB_encrypt_text, ofb_enc
 
 
 def get_next_iteration(text, last_element):
     xored_text = OFB.key_encrypt_OFB(last_element, AES_data["key"])
-    print(xored_text.encode())
-    print(text)
-    OFB_encrypt_text = OFB.xor(xored_text.encode(), text)
-    OFB_text = "~".join(letter for letter in OFB_encrypt_text)
-    return OFB_text, xored_text
+    OFB_encrypt_text = OFB.xor(xored_text, text)
+    return OFB_encrypt_text, xored_text
 
 
 def send_data_OFB(conn):
     q = 0
+    global done
+    done = True
     last_encoded_element = None
     is_first_iteration = True
     with open("text_to_send", "r+") as f:
@@ -122,7 +122,8 @@ def send_data_OFB(conn):
     if end < 16:
         text = map[0:len(map)]
         encoded_text, last_encoded_element = first_iteration_OFB(text)
-        conn.send(encoded_text.encode())
+        conn.send(encoded_text)
+        done = True
         time.sleep(1)
     else:
         while start < end:
@@ -131,10 +132,10 @@ def send_data_OFB(conn):
             if is_first_iteration:
                 encoded_text, last_encoded_element = first_iteration_OFB(text)
                 is_first_iteration = False
-                conn.send(encoded_text.encode())
+                conn.send(encoded_text)
             else:
                 encoded_text, last_encoded_element = get_next_iteration(text, last_encoded_element)
-                conn.send(encoded_text.encode())
+                conn.send(encoded_text)
             if q == 2:
                 time.sleep(1)
                 print("Key refrshing")
@@ -149,6 +150,7 @@ def send_data_OFB(conn):
             start += 16
     time.sleep(1)
     conn.send("Done".encode())
+    done = True
     print("Whole data sent")
 
 
@@ -158,12 +160,13 @@ def get_encryption_type():
 
 
 def start_server():
+    global can_do_transfer
     while 1:
-        print("Done:", done)
         if done:
             conn.close()
             return
-        sender = get_encryption_type()
+        # sender = get_encryption_type()
+        sender = "OFB"
         print("Selected mode:", sender)
         conn.send(sender.encode())
         data = conn.recv(BUFFER_SIZE)
