@@ -51,7 +51,8 @@ while 1:
             aes_key = aes.encrypt(pad(KM["OFB_key"], 16))
         conn.send(aes_key)
         time.sleep(1)
-        conn.send(get_encryption_type().encode())
+        # conn.send(get_encryption_type().encode())
+        conn.send("CBC".encode())
     else:
         conn.send("does not exist".encode())
 conn.close()
