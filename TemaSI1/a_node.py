@@ -61,7 +61,6 @@ def send_data_CBC(conn, map, start, end):
     else:
         while start < end:
             key_refresh += 1
-            print("Key refresh:", key_refresh)
             if key_refresh == q:
                 time.sleep(1)
                 print("Key refrshing")
@@ -76,7 +75,7 @@ def send_data_CBC(conn, map, start, end):
                 time.sleep(1)
                 conn.send(mode)
                 key_refresh = 0
-                start_transfer(mode, conn, map, start, end)
+                start_transfer(mode.decode(), conn, map, start, end)
             text = map[start:(start + 16)]
             if is_first_iteration:
                 encoded_text = first_iteration_CBC(text)

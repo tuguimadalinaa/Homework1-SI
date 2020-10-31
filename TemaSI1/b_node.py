@@ -63,6 +63,7 @@ while True:
     last_element = None
     if data:
         while received != b"Done":
+            key_refresh += 1
             if recieving_new_key:
                 AES_data['key'] = aes_ecb_decrypt(received)
                 data = tcp_client.recv(1024).decode()
