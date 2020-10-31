@@ -30,10 +30,12 @@ def get_km_client_conn():
     return km_client
 
 
-def aes_ecb_decrypt(cypher):
+def aes_ecb_decrypt(cypher, iv):
     aes = AES.new(AES_data["K3"], AES.MODE_ECB)
     aes_key = aes.decrypt(cypher)
-    return unpad(aes_key, 16)
+    aes_iv = AES.new(AES_data["K3"], AES.MODE_ECB)
+    iv = aes_iv.decrypt(iv)
+    return unpad(aes_key, 16), iv
 
 
 def first_iteration_CBC(text):
@@ -68,13 +70,16 @@ def send_data_CBC(conn, map, start, end):
                 km_client = get_km_client_conn()
                 km_client.send('key_refresh'.encode())
                 received = km_client.recv(1024)
+                iv = km_client.recv(1024)
                 mode = km_client.recv(1024)
                 km_client.close()
-                AES_data['key'] = aes_ecb_decrypt(received)
+                AES_data['key'], AES_data['iv'] = aes_ecb_decrypt(received, iv)
                 conn.send(received)
                 time.sleep(1)
                 conn.send(mode)
                 key_refresh = 0
+                time.sleep(0.1)
+                conn.send(iv)
                 start_transfer(mode.decode(), conn, map, start, end)
             text = map[start:(start + 16)]
             if is_first_iteration:
@@ -134,14 +139,17 @@ def send_data_OFB(conn, map, start, end):
                 km_client = get_km_client_conn()
                 km_client.send('key_refresh'.encode())
                 received = km_client.recv(1024)
+                iv = km_client.recv(1024)
                 mode = km_client.recv(1024)
                 print("New mode:", mode)
                 km_client.close()
-                AES_data['key'] = aes_ecb_decrypt(received)
+                AES_data['key'], AES_data['iv'] = aes_ecb_decrypt(received, iv)
                 conn.send(received)
                 time.sleep(1)
                 conn.send(mode)
                 key_refresh = 0
+                time.sleep(0.1)
+                conn.send(iv)
                 start_transfer(mode.decode(), conn, map, start, end)
             if is_first_iteration:
                 encoded_text, last_encoded_element = first_iteration_OFB(text)
@@ -163,6 +171,7 @@ def get_encryption_type():
 
 
 def start_transfer(data, conn, map, start, end):
+    print("Mode:", data)
     if data == 'CBC':
         send_data_CBC(conn, map, start, end)
     else:
@@ -178,27 +187,28 @@ def start_server():
         if done:
             conn.close()
             return
-        # sender = get_encryption_type()
-        sender = "CBC"
-        print("Selected mode:", sender)
+        km_client = get_km_client_conn()
+        sender = get_encryption_type()
         conn.send(sender.encode())
         data = conn.recv(BUFFER_SIZE)
         data = data.decode()
         if not data: break
-        km_client = get_km_client_conn()
         km_client.send(data.encode())
         received = km_client.recv(1024)
+        iv = km_client.recv(1024)
         km_client.close()
         if data == 'CBC':
-            mode = "CBC"
             can_do_transfer = True
-            AES_data['key'] = aes_ecb_decrypt(received)
+            AES_data['key'], AES_data['iv'] = aes_ecb_decrypt(received, iv)
             conn.send(received)
+            conn.send(iv)
         elif data == "OFB":
-            mode = "OFB"
             can_do_transfer = True
-            AES_data['key'] = aes_ecb_decrypt(received)
+            AES_data['key'],  AES_data['iv'] = aes_ecb_decrypt(received, iv)
+            print("Second:", AES_data['iv'])
             conn.send(received)
+            time.sleep(1)
+            conn.send(iv)
         else:
             conn.send("No such mode".encode())
         if can_do_transfer:

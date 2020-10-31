@@ -21,10 +21,12 @@ q = 3
 key_refresh = 0
 
 
-def aes_ecb_decrypt(cypher):
+def aes_ecb_decrypt(cypher, iv):
     aes = AES.new(AES_data["K3"].encode("utf8"), AES.MODE_ECB)
     aes_key = aes.decrypt(cypher)
-    return unpad(aes_key, 16)
+    aes_iv = AES.new(AES_data["K3"].encode("utf-8"), AES.MODE_ECB)
+    iv = aes_iv.decrypt(iv)
+    return unpad(aes_key, 16), iv
 
 
 def get_first_iteration_CBC(text):
@@ -58,15 +60,18 @@ while True:
     input_available = False
     tcp_client.sendall(data.encode())
     received = tcp_client.recv(1024)
-    AES_data['key'] = aes_ecb_decrypt(received)
+    iv = tcp_client.recv(1024)
+    AES_data['key'], AES_data['iv'] = aes_ecb_decrypt(received, iv)
     received = tcp_client.recv(1024)
     last_element = None
     if data:
         while received != b"Done":
             key_refresh += 1
             if recieving_new_key:
-                AES_data['key'] = aes_ecb_decrypt(received)
                 data = tcp_client.recv(1024).decode()
+                print("Mode changed to: ", data)
+                iv = tcp_client.recv(1024)
+                AES_data['key'], AES_data['iv'] = aes_ecb_decrypt(received, iv)
                 first_iteration = True
                 recieving_new_key = False
             elif received == b'key_refresh' and not recieving_new_key:

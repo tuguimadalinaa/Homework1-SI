@@ -35,13 +35,26 @@ while 1:
         aes = AES.new(AES_data["K3"], AES.MODE_ECB)
         aes_key = aes.encrypt(pad(KM["CBC_key"], AES.block_size))
         conn.send(aes_key)
+        time.sleep(1)
+        aes = AES.new(AES_data["K3"], AES.MODE_ECB)
+        aes_iv = aes.encrypt(AES_data['iv'])
+        conn.send(aes_iv)
+        time.sleep(1)
     elif data == "OFB":
         mode = "OFB"
         aes = AES.new(AES_data["K3"], AES.MODE_ECB)
         aes_key = aes.encrypt(pad(KM["OFB_key"], AES.block_size))
         conn.send(aes_key)
+        time.sleep(1)
+        print(AES_data['iv'])
+        aes = AES.new(AES_data["K3"], AES.MODE_ECB)
+        aes_iv = aes.encrypt(AES_data['iv'])
+        conn.send(aes_iv)
+        print(aes_iv)
+        time.sleep(1)
     elif data == 'key_refresh':
         aes = AES.new(AES_data["K3"], AES.MODE_ECB)
+        AES_data['iv'] = Crypto.Random.get_random_bytes(AES.block_size)
         aes_key = None
         if mode == "CBC":
             KM["CBC_key"] = Crypto.Random.get_random_bytes(AES.block_size)
@@ -50,9 +63,11 @@ while 1:
             KM["OFB_key"] = Crypto.Random.get_random_bytes(AES.block_size)
             aes_key = aes.encrypt(pad(KM["OFB_key"], 16))
         conn.send(aes_key)
+        aes = AES.new(AES_data["K3"], AES.MODE_ECB)
+        aes_iv = aes.encrypt(AES_data['iv'])
+        conn.send(aes_iv)
         time.sleep(1)
-        # conn.send(get_encryption_type().encode())
-        conn.send("CBC".encode())
+        conn.send(get_encryption_type().encode())
     else:
         conn.send("does not exist".encode())
 conn.close()
