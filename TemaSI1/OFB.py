@@ -22,4 +22,7 @@ def key_decrypt_OFB(text, given_key):
     time.sleep(1)
     cipher = AES.new(given_key, AES.MODE_ECB)
     enc2 = cipher.decrypt(text)
-    return unpad(enc2, 16)
+    try:
+        return unpad(enc2, 16)
+    except Exception as ex:
+        return enc2

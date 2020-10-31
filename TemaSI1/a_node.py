@@ -19,6 +19,8 @@ conn, addr = s.accept()
 can_do_transfer = False
 mode = None
 done = False
+q = 3
+key_refresh = 0
 
 
 def get_km_client_conn():
@@ -46,15 +48,11 @@ def encode_CBC(text, last_element):
     return CBC_encrypt_text
 
 
-def send_data_CBC(conn):
-    q = 0
+def send_data_CBC(conn, map, start, end):
+    global q
+    global key_refresh
     last_encoded_element = None
     is_first_iteration = True
-    with open("text_to_send", "r+") as f:
-        map = mmap.mmap(f.fileno(), 0)
-        map.readline()
-    start = 0
-    end = len(map)
     if end < 16:
         text = map[0:len(map)]
         encoded_text = first_iteration_CBC(text)
@@ -62,7 +60,23 @@ def send_data_CBC(conn):
         time.sleep(1)
     else:
         while start < end:
-            q += 1
+            key_refresh += 1
+            print("Key refresh:", key_refresh)
+            if key_refresh == q:
+                time.sleep(1)
+                print("Key refrshing")
+                conn.send("key_refresh".encode())
+                km_client = get_km_client_conn()
+                km_client.send('key_refresh'.encode())
+                received = km_client.recv(1024)
+                mode = km_client.recv(1024)
+                km_client.close()
+                AES_data['key'] = aes_ecb_decrypt(received)
+                conn.send(received)
+                time.sleep(1)
+                conn.send(mode)
+                key_refresh = 0
+                start_transfer(mode, conn, map, start, end)
             text = map[start:(start + 16)]
             if is_first_iteration:
                 encoded_text = first_iteration_CBC(text)
@@ -76,24 +90,13 @@ def send_data_CBC(conn):
                 time.sleep(1)
                 conn.send(last_encoded_element)
                 last_encoded_element = CBC_encrypt
-            if q == 2:
-                time.sleep(1)
-                print("Key refrshing")
-                conn.send("key_refresh".encode())
-                km_client = get_km_client_conn()
-                km_client.send('key_refresh'.encode())
-                received = km_client.recv(1024)
-                km_client.close()
-                AES_data['key'] = aes_ecb_decrypt(received)
-                conn.send(received)
-                q = 0
             start += 16
     time.sleep(1)
     conn.send("Done".encode())
+    conn.close()
     global done
     done = True
     print("Whole data sent")
-    conn.close()
 
 
 def first_iteration_OFB(text):
@@ -108,17 +111,13 @@ def get_next_iteration(text, last_element):
     return OFB_encrypt_text, xored_text
 
 
-def send_data_OFB(conn):
-    q = 0
+def send_data_OFB(conn, map, start, end):
+    global q
+    global key_refresh
     global done
     done = True
     last_encoded_element = None
     is_first_iteration = True
-    with open("text_to_send", "r+") as f:
-        map = mmap.mmap(f.fileno(), 0)
-        map.readline()
-    start = 0
-    end = len(map)
     if end < 16:
         text = map[0:len(map)]
         encoded_text, last_encoded_element = first_iteration_OFB(text)
@@ -127,8 +126,24 @@ def send_data_OFB(conn):
         time.sleep(1)
     else:
         while start < end:
-            q += 1
+            key_refresh += 1
             text = map[start:(start + 16)]
+            if key_refresh == q:
+                time.sleep(1)
+                print("Key refrshing")
+                conn.send("key_refresh".encode())
+                km_client = get_km_client_conn()
+                km_client.send('key_refresh'.encode())
+                received = km_client.recv(1024)
+                mode = km_client.recv(1024)
+                print("New mode:", mode)
+                km_client.close()
+                AES_data['key'] = aes_ecb_decrypt(received)
+                conn.send(received)
+                time.sleep(1)
+                conn.send(mode)
+                key_refresh = 0
+                start_transfer(mode.decode(), conn, map, start, end)
             if is_first_iteration:
                 encoded_text, last_encoded_element = first_iteration_OFB(text)
                 is_first_iteration = False
@@ -136,17 +151,6 @@ def send_data_OFB(conn):
             else:
                 encoded_text, last_encoded_element = get_next_iteration(text, last_encoded_element)
                 conn.send(encoded_text)
-            if q == 2:
-                time.sleep(1)
-                print("Key refrshing")
-                conn.send("key_refresh".encode())
-                km_client = get_km_client_conn()
-                km_client.send('key_refresh'.encode())
-                received = km_client.recv(1024)
-                km_client.close()
-                AES_data['key'] = aes_ecb_decrypt(received)
-                conn.send(received)
-                q = 0
             start += 16
     time.sleep(1)
     conn.send("Done".encode())
@@ -159,14 +163,24 @@ def get_encryption_type():
     return random.choice(data)
 
 
+def start_transfer(data, conn, map, start, end):
+    if data == 'CBC':
+        send_data_CBC(conn, map, start, end)
+    else:
+        send_data_OFB(conn, map, start, end)
+
+
 def start_server():
     global can_do_transfer
+    with open("text_to_send", "r+") as f:
+        map = mmap.mmap(f.fileno(), 0)
+        map.readline()
     while 1:
         if done:
             conn.close()
             return
         # sender = get_encryption_type()
-        sender = "OFB"
+        sender = "CBC"
         print("Selected mode:", sender)
         conn.send(sender.encode())
         data = conn.recv(BUFFER_SIZE)
@@ -189,10 +203,7 @@ def start_server():
         else:
             conn.send("No such mode".encode())
         if can_do_transfer:
-            if data == 'CBC':
-                send_data_CBC(conn)
-            else:
-                send_data_OFB(conn)
+            start_transfer(data, conn, map=map, start=0, end=len(map))
 
 
 if __name__ == "__main__":
