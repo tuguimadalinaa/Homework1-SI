@@ -10,7 +10,7 @@ host_ip, server_port = "127.0.0.1", 5005
 tcp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 tcp_client.connect((host_ip, server_port))
 input_available = True
-AES_data = {'K3': '1234567891234568', 'iv': b'\xad\xbe\xf6\xc2\xb3p\x10I\xc6\x96 M\xb9\xa1\x96b', 'key': None}
+AES_data = {'K3': '1234567891234568', 'iv': None, 'key': None}
 encryption_type_dict = {"CBC": AES.MODE_CBC, "OFB": AES.MODE_OFB}
 encryption_type = None
 key_to_use = None

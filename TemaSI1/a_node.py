@@ -7,7 +7,7 @@ import CBC
 import OFB
 import random
 
-AES_data = {'K3': b'1234567891234568', 'iv': b'\xad\xbe\xf6\xc2\xb3p\x10I\xc6\x96 M\xb9\xa1\x96b', 'key': None}
+AES_data = {'K3': b'1234567891234568', 'iv': None, 'key': None}
 print("Server started")
 TCP_IP = '127.0.0.1'
 TCP_PORT = 5005
